@@ -454,3 +454,104 @@ $comment = Comment::find(1);
 
 $parent = $comment->commentable; // Will return Post or Video model
 
+
+//Many-to-Many Polymorphic
+
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->timestamps();
+});
+
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->timestamps();
+});
+
+
+Schema::create('tags', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+
+
+Schema::create('tags', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+
+
+Schema::create('taggables', function (Blueprint $table) {
+    $table->unsignedBigInteger('tag_id');
+    $table->unsignedBigInteger('taggable_id');
+    $table->string('taggable_type');
+});
+
+
+class Tag extends Model
+{
+    protected $fillable = ['name'];
+
+    public function posts()
+    {
+        return $this->morphedByMany(Post::class, 'taggable');
+    }
+
+    public function videos()
+    {
+        return $this->morphedByMany(Video::class, 'taggable');
+    }
+}
+
+
+class Post extends Model
+{
+    protected $fillable = ['title'];
+
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+}
+
+class Video extends Model
+{
+    protected $fillable = ['name'];
+
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+}
+
+$post = Post::find(1);
+$post->tags()->attach([1, 2]);
+
+$video = Video::find(1);
+$video->tags()->attach([2, 3]);
+
+$post = Post::with('tags')->find(1);
+
+foreach ($post->tags as $tag) {
+    echo $tag->name;
+}
+
+
+$tag = Tag::with('posts')->find(1);
+
+foreach ($tag->posts as $post) {
+    echo $post->title;
+}
+
+
+$tag = Tag::with('videos')->find(1);
+
+foreach ($tag->videos as $video) {
+    echo $video->name;
+}
+
+
+
