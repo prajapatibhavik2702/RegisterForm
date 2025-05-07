@@ -375,3 +375,82 @@ foreach ($countries as $country) {
 }
 
 
+
+//Polymorphic Relationships
+
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->timestamps();
+});
+
+Schema::create('videos', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+
+Schema::create('comments', function (Blueprint $table) {
+    $table->id();
+    $table->text('body');
+
+    // Polymorphic fields
+    $table->unsignedBigInteger('commentable_id');
+    $table->string('commentable_type');
+
+    $table->timestamps();
+});
+
+class Post extends Model
+{
+    protected $fillable = ['title'];
+
+    public function comments()
+    {
+        return $this->morphMany(Comment::class, 'commentable');
+    }
+}
+
+class Video extends Model
+{
+    protected $fillable = ['name'];
+
+    public function comments()
+    {
+        return $this->morphMany(Comment::class, 'commentable');
+    }
+}
+
+class Comment extends Model
+{
+    protected $fillable = ['body'];
+
+    public function commentable()
+    {
+        return $this->morphTo();
+    }
+}
+
+$post = Post::find(1);
+
+$post->comments()->create([
+    'body' => 'Nice article!',
+]);
+
+
+$video = Video::find(1);
+
+$video->comments()->create([
+    'body' => 'Awesome video!',
+]);
+
+$post = Post::with('comments')->find(1);
+
+foreach ($post->comments as $comment) {
+    echo $comment->body . "<br>";
+}
+
+$comment = Comment::find(1);
+
+$parent = $comment->commentable; // Will return Post or Video model
+
