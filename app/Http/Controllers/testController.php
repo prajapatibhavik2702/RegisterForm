@@ -73,6 +73,71 @@ public function showProfile($id)
 
 
 
-//
+//One-to-Many
+
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->text('body');
+    $table->timestamps();
+});
+
+Schema::create('comments', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('post_id');
+    $table->text('comment');
+    $table->string('commenter')->nullable();
+    $table->timestamps();
+
+    $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');
+});
 
 
+class Post extends Model
+{
+    protected $fillable = ['title', 'body'];
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+}
+
+class Comment extends Model
+{
+    protected $fillable = ['post_id', 'comment', 'commenter'];
+
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
+}
+
+public function store(Request $request)
+{
+    $post = Post::create([
+        'title' => $request->title,
+        'body' => $request->body,
+    ]);
+
+    // Optionally, add comments
+    if ($request->comments) {
+        foreach ($request->comments as $commentData) {
+            $post->comments()->create($commentData);
+        }
+    }
+
+    return response()->json(['message' => 'Post created', 'post' => $post->load('comments')]);
+}
+
+public function show($id)
+{
+    $post = Post::with('comments')->findOrFail($id);
+    return response()->json($post);
+}
+
+public function showComment($id)
+{
+    $comment = Comment::with('post')->findOrFail($id);
+    return response()->json($comment);
+}
