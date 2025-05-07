@@ -141,3 +141,80 @@ public function showComment($id)
     $comment = Comment::with('post')->findOrFail($id);
     return response()->json($comment);
 }
+
+Many-to-Many
+
+Schema::create('students', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+
+Schema::create('courses', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->timestamps();
+});
+
+Schema::create('course_student', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('student_id');
+    $table->unsignedBigInteger('course_id');
+    $table->timestamps();
+
+    $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
+    $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');
+});
+
+
+class Student extends Model
+{
+    protected $fillable = ['name'];
+
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'course_student');
+    }
+}
+
+class Course extends Model
+{
+    protected $fillable = ['title'];
+
+    public function students()
+    {
+        return $this->belongsToMany(Student::class, 'course_student');
+    }
+}
+
+public function store(Request $request)
+{
+    // 1. Create Student
+    $student = Student::create([
+        'name' => $request->name,
+    ]);
+
+    // 2. Attach Courses
+    $student->courses()->attach($request->course_ids); // Array of course IDs
+
+    return response()->json([
+        'message' => 'Student created and courses assigned',
+        'student' => $student->load('courses'),
+    ]);
+}
+
+public function show($id)
+{
+    $student = Student::with('courses')->findOrFail($id);
+    return response()->json($student);
+}
+
+public function showCourse($id)
+{
+    $course = Course::with('students')->findOrFail($id);
+    return response()->json($course);
+}
+
+//$student->courses()->attach([1, 2]) – Add new
+//$student->courses()->sync([2, 3]) – Replace old with new
+//$student->courses()->detach([1]) – Remove specific
