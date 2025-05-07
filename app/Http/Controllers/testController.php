@@ -286,4 +286,92 @@ class Phone extends Model
 $country = Country::with('phone')->find(1);
 return $country->phone;
 
+//Has Many Through
+
+Schema::create('countries', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+
+Schema::create('users', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->unsignedBigInteger('country_id');
+    $table->timestamps();
+
+    $table->foreign('country_id')->references('id')->on('countries')->onDelete('cascade');
+});
+
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('user_id');
+    $table->string('title');
+    $table->text('body');
+    $table->timestamps();
+
+    $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+});
+
+class Country extends Model
+{
+    protected $fillable = ['name'];
+
+    // Has many Users directly
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    // Has many Posts through Users
+    public function posts()
+    {
+        return $this->hasManyThrough(Post::class, User::class);
+    }
+}
+
+
+class User extends Model
+{
+    protected $fillable = ['name', 'country_id'];
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+}
+
+class Post extends Model
+{
+    protected $fillable = ['user_id', 'title', 'content'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+
+$country = Country::with('posts')->find(1);
+
+foreach ($country->posts as $post) {
+    echo $post->title . '<br>';
+}
+
+/
+
+$countries = Country::with('posts')->get();
+
+foreach ($countries as $country) {
+    echo "<h4>" . $country->name . "</h4>";
+
+    foreach ($country->posts as $post) {
+        echo $post->title . "<br>";
+    }
+}
+
 
