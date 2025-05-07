@@ -142,7 +142,7 @@ public function showComment($id)
     return response()->json($comment);
 }
 
-Many-to-Many
+//**Many-to-Many**
 
 Schema::create('students', function (Blueprint $table) {
     $table->id();
@@ -218,3 +218,72 @@ public function showCourse($id)
 //$student->courses()->attach([1, 2]) – Add new
 //$student->courses()->sync([2, 3]) – Replace old with new
 //$student->courses()->detach([1]) – Remove specific
+
+
+
+
+//Has One Through
+Schema::create('countries', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+
+Schema::create('users', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->unsignedBigInteger('country_id');
+    $table->timestamps();
+
+    $table->foreign('country_id')->references('id')->on('countries')->onDelete('cascade');
+});
+
+Schema::create('phones', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('user_id');
+    $table->string('phone_number');
+    $table->timestamps();
+
+    $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+});
+
+
+class Country extends Model
+{
+    protected $fillable = ['name'];
+
+    public function phone()
+    {
+        return $this->hasOneThrough(Phone::class, User::class);
+    }
+}
+
+class User extends Model
+{
+    protected $fillable = ['name', 'country_id'];
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function phone()
+    {
+        return $this->hasOne(Phone::class);
+    }
+}
+
+class Phone extends Model
+{
+    protected $fillable = ['user_id', 'phone_number'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+
+$country = Country::with('phone')->find(1);
+return $country->phone;
+
+
