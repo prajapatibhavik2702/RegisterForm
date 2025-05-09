@@ -81,78 +81,86 @@ if ($user->can('view dashboard')) {
 'role' => \Spatie\Permission\Middlewares\RoleMiddleware::class,
 'permission' => \Spatie\Permission\Middlewares\PermissionMiddleware::class,
 
+
+
+
 public function store(Request $request)
 {
+    $request->validate([
+        'name'      => 'required|string|max:255',
+        'email'     => 'required|email|unique:users,email',
+        'password'  => 'required|string|min:6|confirmed',
+        'role'      => 'required|string|exists:roles,name',
+    ]);
+
+    // Create user
     $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
+        'name'     => $request->name,
+        'email'    => $request->email,
         'password' => bcrypt($request->password),
     ]);
 
-    // Step 1: Assign Role
+    // Assign role
     $user->assignRole($request->role);
 
-    // Step 2 (Optional): Assign Role's Permissions Directly
+    // Get permissions from the role
     $role = Role::where('name', $request->role)->first();
     $permissions = $role->permissions->pluck('name')->toArray();
-    $user->syncPermissions($permissions); // Direct assign
 
-    return response()->json(['message' => 'User created with role and permissions.']);
+    // Assign those permissions directly (optional)
+    $user->syncPermissions($permissions);
+
+    return response()->json([
+        'message' => 'User created successfully with role and permissions.',
+        'user_id' => $user->id,
+    ]);
 }
 
 
-
-public function updateUser(Request $request, $id)
+public function update(Request $request, $id)
 {
     $request->validate([
-        'name' => 'required|string|max:255',
+        'name'  => 'required|string|max:255',
         'email' => 'required|email|unique:users,email,' . $id,
-        'role_name' => 'required|string|exists:roles,name',
+        'role'  => 'required|string|exists:roles,name',
     ]);
 
     $user = User::findOrFail($id);
 
-    // Check if role is changing
-    $currentRole = $user->roles->pluck('name')->first(); // get current role
-    $newRole = $request->role_name;
-
-    // Update user data
+    // Update basic info
     $user->update([
-        'name' => $request->name,
+        'name'  => $request->name,
         'email' => $request->email,
     ]);
 
-    if ($currentRole !== $newRole) {
-        // Step 1: Sync new role
-        $user->syncRoles([$newRole]);
+    // Remove old role and assign new one
+    $user->syncRoles([$request->role]);
 
-        // Step 2: Get permissions from new role
-        $role = Role::where('name', $newRole)->first();
-        $newPermissions = $role->permissions->pluck('name')->toArray();
-
-        // Step 3: Sync permissions to user
-        $user->syncPermissions($newPermissions);
-    }
+    // Assign updated permissions from new role
+    $role = Role::where('name', $request->role)->first();
+    $permissions = $role->permissions->pluck('name')->toArray();
+    $user->syncPermissions($permissions);
 
     return response()->json([
-        'message' => 'User updated successfully.',
-        'role_changed' => $currentRole !== $newRole,
-        'current_role' => $newRole,
+        'message' => 'User updated successfully with new role and permissions.'
     ]);
 }
-
 
 public function destroy($id)
 {
     $user = User::findOrFail($id);
 
-    // Optional: Remove roles and permissions before deleting
-    $user->syncRoles([]);         // remove all roles
-    $user->syncPermissions([]);   // remove all direct permissions
+    // Optional cleanup
+    $user->syncRoles([]);
+    $user->syncPermissions([]);
 
     $user->delete();
 
-    return response()->json(['message' => 'User deleted successfully.']);
+    return response()->json([
+        'message' => 'User deleted successfully.'
+    ]);
 }
+
+
 
 
