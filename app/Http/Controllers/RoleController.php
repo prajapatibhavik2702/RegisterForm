@@ -82,6 +82,75 @@ if ($user->can('view dashboard')) {
 'permission' => \Spatie\Permission\Middlewares\PermissionMiddleware::class,
 
 
+//Role Side this code
+
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+
+public function createRoleWithPermissions(Request $request)
+{
+    $request->validate([
+        'role_name'    => 'required|string|unique:roles,name',
+        'permissions'  => 'required|array', // e.g. ['edit post', 'delete post']
+    ]);
+
+    // 1. Create Role
+    $role = Role::create(['name' => $request->role_name]);
+
+    // 2. Assign Permissions
+    $role->syncPermissions($request->permissions);
+
+    return response()->json([
+        'message' => 'Role created and permissions assigned.',
+        'role'    => $role->name,
+    ]);
+}
+
+
+
+public function updateRolePermissions(Request $request, $roleId)
+{
+    $request->validate([
+        'permissions' => 'required|array', // permission names or IDs
+    ]);
+
+    $role = Role::findOrFail($roleId);
+
+    // 1. Update Role Permissions
+    $role->syncPermissions($request->permissions);
+
+    // 2. Optional: Sync with all users having this role (if using direct permissions on users)
+    $users = \App\Models\User::role($role->name)->get();
+
+    foreach ($users as $user) {
+        $user->syncPermissions($role->permissions); // sync updated perms
+    }
+
+    return response()->json([
+        'message' => 'Role permissions updated successfully and synced to users.'
+    ]);
+}
+
+public function deleteRole($id)
+{
+    $role = Role::findOrFail($id);
+
+    $role->permissions()->detach();
+
+    // Delete the role
+    $role->delete();
+
+    return response()->json([
+        'message' => 'Role deleted successfully.',
+    ]);
+}
+//Role Exit Code pls..
+
+
+
+
+
+
 
 
 public function store(Request $request)
@@ -160,6 +229,7 @@ public function destroy($id)
         'message' => 'User deleted successfully.'
     ]);
 }
+
 
 
 
