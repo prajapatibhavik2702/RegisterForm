@@ -84,7 +84,7 @@ php artisan migrate
         $response['message'] = $message;
         return response()->json((array)$response, 200);
     }
--
+    
 
     public function sendError($error, $errorMessages = [], $code = 200)
     {
