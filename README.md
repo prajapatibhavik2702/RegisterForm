@@ -73,3 +73,30 @@ php artisan ui bootstrap --auth
 php artisan migrate
 
 
+-
+
+
+   public function sendResponse($result = [], $message)
+    {
+        $response = array();
+        $response['error'] = false;
+        $response['data'] = (empty($result)) ? (object)[] : $result;
+        $response['message'] = $message;
+        return response()->json((array)$response, 200);
+    }
+-
+
+    public function sendError($error, $errorMessages = [], $code = 200)
+    {
+
+        $response = [
+            'error' => true,
+        ];
+
+        $response['data'] = $errorMessages;
+        $response['message'] = $error;
+        return response()->json($response, $code);
+    }
+
+
+
